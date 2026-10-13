@@ -4,8 +4,36 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
 TEMPLATE_DIR="$SCRIPT_DIR/templates"
+
+preflight_checks() {
+	echo "Pre-flight checks"
+	local missing=0
+	if command -v python3 >/dev/null 2>&1; then
+		echo "[OK] $(python3 --version 2>&1)"
+	else
+		echo "[FAIL] python3 is not installed."
+		missing=1
+	fi
+	if command -v zip >/dev/null 2>&1; then
+		echo "[OK] zip is installed"
+	else
+		echo "[FAIL] zip is not installed."
+		missing=1
+	fi
+	if [ "$missing" -eq 1 ]; then
+		echo "Install the missing tool(s) and try again."
+		return 1
+	fi
+	return 0
+}
+
+
+
+
 deploy() {
-    echo ">> Deploy feature (not built yet)"
+echo ">> Deploy feature"
+preflight_checks || return 1
+echo ">> Pre-flight passed (rest of deploy not built yet)"
 }
 run_app() {
     echo ">> Run feature (not built yet)"
