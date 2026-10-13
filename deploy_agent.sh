@@ -26,8 +26,45 @@ preflight_checks() {
 	fi
 	return 0
 }
+get_project_name() {
+	local name
+	while true; do
+		read -r -p "Enter a name for the project: " name || return 1
+		if [ -z "$name" ]; then
+			echo "Name cannot be empty."
+		elif [[ ! "$name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+			echo "Use only letters, numbers, '_' or '-'."
+		else
+			break
+		fi
+	done
+	PROJECT_NAME="$name"
+	PROJECT_DIR="attendance_tracker_${name}"
+}
 
+handle_existing_dir() {
+	if [ -e "$PROJECT_DIR" ]; then
+		echo "'$PROJECT_DIR' already exists."
+		read -r -p "Overwrite it? (y/n): " answer
+		case "$answer" in 
+			y|Y)
+				rm -rf "$PROJECT_DIR" || { echo "[ERROR] Could not remove '$PROJECT_DIR'."; return 1; }
+				echo "	Old project removed." ;;
+				*)
+				echo "Aborted. Nothing was changed."
+				return 1 ;;
+			esac
+		fi
+		return 0
+}
 
+create_structure() {
+	mkdir -p "$PROJECT_DIR/Helpers" "$PROJECT_DIR/reports" || {
+		echo "[ERROR] Could not create directories (check permissions)."
+		return 1
+	}
+	echo "[OK] Created $PROJECT_DIR/ with Helpers/ and reports/"
+}
 
 
 deploy() {
@@ -35,9 +72,14 @@ echo ">> Deploy feature"
 preflight_checks || return 1
 echo ">> Pre-flight passed (rest of deploy not built yet)"
 }
-run_app() {
-    echo ">> Run feature (not built yet)"
-}
+echo ">> Deploy feature"
+preflight_checks || return 1
+get_project_name || return 1
+handle_existing_dir || return 1
+create_structure || return 1
+echo ">> Structure created (files not copied yet)"
+
+
 archive_logs() {
     echo ">> Archive feature (not built yet)"
 }
