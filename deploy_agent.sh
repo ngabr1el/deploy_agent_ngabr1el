@@ -1,7 +1,7 @@
 #!/bin/bash
 #Writing the frame of deploy_agent.sh a menu that loops until you choose Exit with an empty function for each feature
 
-SCRIPT_DIR="$(cd "$(dirname "${BAH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
 TEMPLATE_DIR="$SCRIPT_DIR/templates"
 deploy() {
