@@ -68,17 +68,17 @@ create_structure() {
 
 
 deploy() {
-echo ">> Deploy feature"
-preflight_checks || return 1
-echo ">> Pre-flight passed (rest of deploy not built yet)"
+	echo ">> Deploy feature"
+	preflight_checks || return 1
+	get_project_name || return 1
+       	handle_existing_dir || return 1
+	create_structure || return 1
+	echo ">> Structure created (files not copied yet)"
 }
-echo ">> Deploy feature"
-preflight_checks || return 1
-get_project_name || return 1
-handle_existing_dir || return 1
-create_structure || return 1
-echo ">> Structure created (files not copied yet)"
 
+run_app() {
+    echo ">> Run feature (not built yet)"
+}
 
 archive_logs() {
     echo ">> Archive feature (not built yet)"
