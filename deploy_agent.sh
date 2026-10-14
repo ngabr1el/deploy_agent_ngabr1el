@@ -186,6 +186,44 @@ update_thresholds() {
     grep -E '"(warning|failure)"' "$cfg"
 }
 
+launch_app() {
+    local dir="$1" status=0
+    if [ ! -f "$dir/attendance_checker.py" ]; then
+        echo "[ERROR] $dir/attendance_checker.py not found."
+        return 1
+    fi
+    if [ ! -f "$dir/Helpers/assets.csv" ] || [ ! -f "$dir/Helpers/config.json" ]; then
+        echo "[ERROR] Helpers/assets.csv or Helpers/config.json is missing in $dir."
+        return 1
+    fi
+    echo "--- Starting the Attendance Tracker in $dir ---"
+    (cd "$dir" && python3 attendance_checker.py) || status=$? #Captures the app’s exit code without stopping the script
+    if [ "$status" -eq 0 ]; then
+        echo "[OK] Application finished normally."
+    else
+        echo "[ERROR] Application exited with status $status."
+        return 1
+    fi
+}
+
+run_app() {
+    local name dir
+    echo "Existing projects:"
+    ls -d attendance_tracker_*/ 2>/dev/null || echo "  (none found - deploy one first)"
+    read -r -p "Project name (the part after attendance_tracker_): " name || return 1
+    if [[ ! "$name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+        echo "Invalid or empty name."
+        return 1
+    fi
+    dir="attendance_tracker_${name}"
+    if [ ! -d "$dir" ]; then
+        echo "[ERROR] '$dir' does not exist. Deploy it first (option 1)."
+        return 1
+    fi
+    launch_app "$dir"
+}
+
+
 deploy() {
 	echo ">> Deploy feature"
 	preflight_checks || return 1
@@ -196,12 +234,9 @@ deploy() {
 	build_roster || return 1
         set_permissions || return 1
         update_thresholds || return 1
-	echo ">> Deployment files ready (verification run not built yet)"
+        launch_app "$PROJECT_DIR" || return 1
 }
 
-run_app() {
-    echo ">> Run feature (not built yet)"
-}
 
 archive_logs() {
     echo ">> Archive feature (not built yet)"
