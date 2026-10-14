@@ -59,6 +59,7 @@ handle_existing_dir() {
 }
 
 create_structure() {
+    PROJECT_CREATED=1
 	mkdir -p "$PROJECT_DIR/Helpers" "$PROJECT_DIR/reports" || {
 		echo "[ERROR] Could not create directories (check permissions)."
 		return 1
@@ -270,17 +271,54 @@ archive_logs() {
     echo "Archive complete: $count of 2 log(s) archived."
 }
 
+
+handle_interrupt() {
+    local sig="$1" zipfile
+    trap '' INT TSTP
+    cd "$SCRIPT_DIR" || exit 1
+    echo
+    echo "[!] Deployment interrupted by $sig."
+    if [ "$PROJECT_CREATED" -eq 1 ] && [ -d "$PROJECT_DIR" ]; then
+        zipfile="${PROJECT_DIR}_archive.zip"
+        echo "Archiving the incomplete project into $zipfile ..."
+        rm -f "$zipfile"
+        if zip -rq "$zipfile" "$PROJECT_DIR"; then
+            echo "[OK] Archive created: $zipfile"
+            rm -rf "$PROJECT_DIR" && echo "[OK] Incomplete folder $PROJECT_DIR removed."
+        else
+            echo "[ERROR] zip failed. Keeping $PROJECT_DIR so nothing is lost."
+        fi
+    else
+        echo "No new project folder had been created yet, so there is nothing to archive."
+        echo "Any existing projects were left untouched."
+    fi
+    echo "Session closed."
+    exit 1
+}
+
+deploy_steps() {
+    preflight_checks || return 1
+    get_project_name || return 1
+    handle_existing_dir || return 1
+    create_structure || return 1
+    copy_core_files || return 1
+    build_roster || return 1
+    set_permissions || return 1
+    update_thresholds || return 1
+}
+
 deploy() {
-	echo ">> Deploy feature"
-	preflight_checks || return 1
-	get_project_name || return 1
-       	handle_existing_dir || return 1
-        create_structure || return 1
-	copy_core_files || return 1
-	build_roster || return 1
-        set_permissions || return 1
-        update_thresholds || return 1
-        launch_app "$PROJECT_DIR" || return 1
+    echo ">> Deploy feature"
+    PROJECT_DIR=""
+    PROJECT_CREATED=0
+    trap 'handle_interrupt "SIGINT (Ctrl+C)"' INT
+    trap 'handle_interrupt "SIGTSTP (Ctrl+Z)"' TSTP
+    if ! deploy_steps; then
+        trap - INT TSTP
+        return 1
+    fi
+    trap - INT TSTP
+    launch_app "$PROJECT_DIR" || return 1
 }
 
 
