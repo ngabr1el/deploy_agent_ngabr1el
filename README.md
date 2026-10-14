@@ -189,4 +189,4 @@ Each step was built on its own branch and merged into `main` through a pull requ
 
 ## Video walkthrough
 
-VIDEO_LINK_HERE
+[watch the walkthrough video](https://youtu.be/vXDieSbNIOU)
