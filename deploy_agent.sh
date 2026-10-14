@@ -224,6 +224,52 @@ run_app() {
 }
 
 
+archive_one() {
+    local src="$1" destdir="$2" prefix="$3" ts="$4" dest
+    dest="$destdir/${prefix}_${ts}.log"
+    if [ ! -f "$src" ]; then
+        echo "[SKIP] $src does not exist, nothing to archive."
+        return 1
+    fi
+    if [ -e "$dest" ]; then
+        echo "[SKIP] $dest already exists (archived twice in the same second)."
+        return 1
+    fi
+    mkdir -p "$destdir" || {
+        echo "[ERROR] Could not create $destdir (check permissions)."
+        return 1
+    }
+    cp "$src" "$dest" || {
+        echo "[ERROR] Could not copy $src to $dest."
+        return 1
+    }
+    echo "[OK] Archived $src -> $dest"
+}
+
+archive_logs() {
+    local name dir ts count=0
+    echo "Existing projects:"
+    ls -d attendance_tracker_*/ 2>/dev/null || echo "  (none found - deploy one first)"
+    read -r -p "Project name (the part after attendance_tracker_): " name || return 1
+    if [[ ! "$name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+        echo "Invalid or empty name."
+        return 1
+    fi
+    dir="attendance_tracker_${name}"
+    if [ ! -d "$dir" ]; then
+        echo "[ERROR] '$dir' does not exist. Deploy it first (option 1)."
+        return 1
+    fi
+    if [ ! -f "$dir/reports/attendance.log" ] && [ ! -f "$dir/reports/absent.log" ]; then
+        echo "No logs found in $dir/reports/. Run the app first (option 2)."
+        return 1
+    fi
+    ts=$(date +%Y%m%d_%H%M%S) #Builds from year, month, day, hour, minute and second.
+    archive_one "$dir/reports/attendance.log" "$dir/archives/attendance" "attendance" "$ts" && count=$((count + 1))
+    archive_one "$dir/reports/absent.log" "$dir/archives/absent" "absent" "$ts" && count=$((count + 1))
+    echo "Archive complete: $count of 2 log(s) archived."
+}
+
 deploy() {
 	echo ">> Deploy feature"
 	preflight_checks || return 1
@@ -238,9 +284,6 @@ deploy() {
 }
 
 
-archive_logs() {
-    echo ">> Archive feature (not built yet)"
-}
 show_menu() {
     echo "   Attendance Tracker Agent"
     echo "  1) Deploy a new project"
