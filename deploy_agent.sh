@@ -139,6 +139,53 @@ build_roster() {
 }
 
 
+set_permissions() {
+    chmod +x "$PROJECT_DIR/attendance_checker.py" &&
+    chmod 600 "$PROJECT_DIR/Helpers/config.json" || {
+        echo "[ERROR] Could not set permissions."
+        return 1
+    }
+    echo "[OK] Permissions set:"
+    ls -l "$PROJECT_DIR/attendance_checker.py" "$PROJECT_DIR/Helpers/config.json"
+}
+
+read_threshold() {
+    local label="$1" default="$2" val
+    while true; do
+        read -r -p "New $label threshold (0-100) [Enter = $default]: " val || return 1
+        val="${val:-$default}"  #A bare Enter falls back to the default
+        if [[ "$val" =~ ^[0-9]{1,3}$ ]] && [ "$((10#$val))" -le 100 ]; then #Only digits, at most 3 of them
+            THRESHOLD_VALUE=$((10#$val))
+            return 0
+        fi
+        echo "Please enter a whole number from 0 to 100."
+    done
+}
+
+update_thresholds() {
+    local answer warn fail cfg="$PROJECT_DIR/Helpers/config.json"
+    read -r -p "Update the attendance alert thresholds? (y/n): " answer || return 1
+    case "$answer" in
+        y|Y) ;;
+        *) echo "Keeping default thresholds (warning 75, failure 50)."; return 0 ;;
+    esac
+    while true; do
+        read_threshold "warning" 75 || return 1
+        warn=$THRESHOLD_VALUE
+        read_threshold "failure" 50 || return 1
+        fail=$THRESHOLD_VALUE
+        [ "$fail" -lt "$warn" ] && break #A failure threshold above the warning one makes no sense, so it asks both again
+        echo "Failure ($fail) must be lower than warning ($warn). Try again." 
+    done
+    sed -i -e "s/\"warning\": [0-9]*/\"warning\": $warn/" \
+           -e "s/\"failure\": [0-9]*/\"failure\": $fail/" "$cfg" || {
+        echo "[ERROR] Could not update config.json."
+        return 1
+    }
+    echo "[OK] Thresholds updated: warning=$warn failure=$fail"
+    grep -E '"(warning|failure)"' "$cfg"
+}
+
 deploy() {
 	echo ">> Deploy feature"
 	preflight_checks || return 1
@@ -147,7 +194,9 @@ deploy() {
         create_structure || return 1
 	copy_core_files || return 1
 	build_roster || return 1
-	echo ">> Files deployed (permissions and thresholds not done yet)"
+        set_permissions || return 1
+        update_thresholds || return 1
+	echo ">> Deployment files ready (verification run not built yet)"
 }
 
 run_app() {
