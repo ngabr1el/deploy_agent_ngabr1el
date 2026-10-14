@@ -284,9 +284,6 @@ deploy() {
 }
 
 
-archive_logs() {
-    echo ">> Archive feature (not built yet)"
-}
 show_menu() {
     echo "   Attendance Tracker Agent"
     echo "  1) Deploy a new project"
